@@ -30,9 +30,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.jans.as.server.service.AuthorizationGrantService;
+import io.jans.as.server.service.token.TokenService;
 import io.jans.as.server.model.common.AuthorizationGrant;
-
 
 public class JansUsernameUpdate extends UsernameUpdate {
 
