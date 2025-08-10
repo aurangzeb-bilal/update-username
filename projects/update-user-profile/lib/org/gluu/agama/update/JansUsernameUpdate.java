@@ -20,10 +20,15 @@ import org.gluu.agama.smtp.SendEmailTemplate;
 import org.gluu.agama.smtp.jans.model.ContextData;
 import io.jans.model.SmtpConfiguration;
 import io.jans.service.MailService;
-import io.jans.as.server.service.IntrospectionService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.Map;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 public class JansUsernameUpdate extends UsernameUpdate {
@@ -71,27 +76,39 @@ public class JansUsernameUpdate extends UsernameUpdate {
             LogUtils.log("Token length: " + token.length());
             LogUtils.log("Token starts with: " + token.substring(0, Math.min(20, token.length())) + "...");
             
-            // Introspect the token using the working method
-            IntrospectionService introspectionService = CdiUtil.bean(IntrospectionService.class);
+            // Get configuration service to get the base URL
+            ConfigurationService configService = CdiUtil.bean(ConfigurationService.class);
+            String baseUrl = configService.getConfiguration().getBaseUrl();
+            if (baseUrl == null || baseUrl.trim().isEmpty()) {
+                baseUrl = "https://demoexample.jans.io"; // fallback to your known URL
+            }
             
-            if (introspectionService == null) {
-                LogUtils.log("ERROR: Could not get IntrospectionService bean");
+            String introspectionUrl = baseUrl + "/jans-auth/restv1/introspection";
+            LogUtils.log("Calling introspection endpoint: " + introspectionUrl);
+            
+            // Prepare the request body
+            String requestBody = "token=" + URLEncoder.encode(token, StandardCharsets.UTF_8.toString());
+            
+            // Create HTTP client and request
+            HttpClient httpClient = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(introspectionUrl))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+            
+            // Send the request
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            
+            if (response.statusCode() != 200) {
+                LogUtils.log("ERROR: Introspection request failed with status: " + response.statusCode());
                 result.put("valid", false);
-                result.put("error", "IntrospectionService not available");
+                result.put("error", "Introspection request failed with status: " + response.statusCode());
                 return result;
             }
             
-            LogUtils.log("Got IntrospectionService, calling introspectToken...");
-            String jsonResponse = introspectionService.introspectToken(token);
-            
-            if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
-                LogUtils.log("ERROR: Token introspection returned null or empty");
-                result.put("valid", false);
-                result.put("error", "Token validation failed - introspection returned null");
-                return result;
-            }
-            
-            LogUtils.log("Introspection JSON response: " + jsonResponse);
+            String jsonResponse = response.body();
+            LogUtils.log("Introspection response: " + jsonResponse);
             
             // Parse the JSON response
             ObjectMapper mapper = new ObjectMapper();
