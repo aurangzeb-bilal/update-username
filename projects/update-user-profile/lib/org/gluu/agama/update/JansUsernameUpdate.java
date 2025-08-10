@@ -107,7 +107,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
             }
             
             // Check for required scopes
-            String[] requiredScopes = {"profile", "user_update", "openid"};
+            String[] requiredScopes = new String[]{"profile", "user_update", "openid"};
             boolean hasRequiredScopes = true;
             for (String requiredScope : requiredScopes) {
                 if (!scopes.contains(requiredScope)) {
@@ -259,7 +259,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
 
             // Check if new username already exists
             User existingUser = getUser(UID, newUsername);
-            if (existingUser != null) {
+            if (existingUser == null) {
                 LogUtils.log("ERROR: Username already exists: " + newUsername);
                 return false;
             }
@@ -289,6 +289,8 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 LogUtils.log("WARNING: SMTP not configured, skipping email notification");
                 return false;
             }
+                return false;
+            }
             
             MailService mailService = CdiUtil.bean(MailService.class);
             
@@ -314,13 +316,13 @@ public class JansUsernameUpdate extends UsernameUpdate {
         try {
             UserService userService = CdiUtil.bean(UserService.class);
             return userService.getUserByAttribute(attributeName, attributeValue);
-            } catch (EntryNotFoundException e) {
-                return null;
-            } catch (Exception e) {
-                LogUtils.log("ERROR: Error getting user by %: %", attributeName, e.getMessage());
-                return null;
-            }
+        } catch (EntryNotFoundException e) {
+            return null;
+        } catch (Exception e) {
+            LogUtils.log("ERROR: Error getting user by %: %", attributeName, e.getMessage());
+            return null;
         }
+    }
 
     private String getSingleValuedAttr(User user, String attrName) {
         try {
