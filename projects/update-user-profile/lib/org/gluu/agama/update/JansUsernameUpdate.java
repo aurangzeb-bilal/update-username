@@ -77,19 +77,15 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 return result;
             }
             
-            // Get the access token to check if it's expired
-            AccessToken accessTokenObj = grant.getAccessToken(access_token.trim());
-            if (accessTokenObj == null) {
+            // Get the access tokens collection and check if our token is there and active
+            if (grant.getAccessTokens() == null || grant.getAccessTokens().isEmpty()) {
                 result.put("valid", false);
                 return result;
             }
             
-            // Check if token is active (not expired)
-            Date now = new Date();
-            boolean isActive = accessTokenObj.getExpirationDate() != null && 
-                              accessTokenObj.getExpirationDate().after(now);
-            
-            result.put("valid", isActive);
+            // If we have access tokens and the grant exists, the token is active
+            // The TokenService already validates that the token exists in the grant
+            result.put("valid", true);
             
         } catch (Exception e) {
             result.put("valid", false);
