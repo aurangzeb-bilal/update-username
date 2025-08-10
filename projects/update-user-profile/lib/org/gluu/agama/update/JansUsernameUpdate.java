@@ -20,8 +20,10 @@ import org.gluu.agama.smtp.SendEmailTemplate;
 import org.gluu.agama.smtp.jans.model.ContextData;
 import io.jans.model.SmtpConfiguration;
 import io.jans.service.MailService;
-import io.jans.as.model.common.IntrospectionResponse;
 import io.jans.as.server.service.IntrospectionService;
+import io.jans.as.server.model.IntrospectionResponse;
+import java.util.HashMap;
+import java.util.Map;
 
 public class JansUsernameUpdate extends UsernameUpdate {
 
@@ -78,8 +80,8 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 return result;
             }
             
-            LogUtils.log("Got IntrospectionService, calling inspect...");
-            IntrospectionResponse introspectionResponse = introspectionService.inspect(token);
+            LogUtils.log("Got IntrospectionService, calling introspect...");
+            IntrospectionResponse introspectionResponse = introspectionService.introspect(token);
             
             if (introspectionResponse == null) {
                 LogUtils.log("ERROR: Token introspection returned null");
@@ -377,7 +379,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
                     "footer", "Terima kasih telah menjaga keamanan akun Anda."));
 
             // ✅ Pick the right lang (fallback to English if missing)
-            Map<String, String> bundle = translations.getOrDefault(preferredLang, translations.get("en"));
+            Map<String, Map<String, String>> bundle = translations.getOrDefault(preferredLang, translations.get("en"));
 
             // Build context data
             ContextData context = new ContextData();
