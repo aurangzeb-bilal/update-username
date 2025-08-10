@@ -78,7 +78,7 @@
 				"width": 170,
 				"height": 124
 			},
-			"selected": true
+			"selected": false
 		},
 		{
 			"id": "repeatNode-630adb5c-19a5-44bb-9244-d5989d0931bb",
@@ -622,7 +622,7 @@
 					"assignments": [
 						{
 							"variableTypeCheck": true,
-							"assignmentExpression": "User not registered with this UserName",
+							"assignmentExpression": "\"User not registered with this UserName\"",
 							"assignedVariableName": "uiFeedback.errorMessage"
 						}
 					],
@@ -632,14 +632,15 @@
 					"descColor": "",
 					"displayName": "ASSIGNMENT",
 					"hasComment": true,
-					"comment": " Show error",
+					"comment": "",
 					"previousNodeId": "whenNode-03ceb86c-e355-471c-86d1-8c02f650e34e"
 				}
 			},
 			"measured": {
 				"width": 170,
 				"height": 124
-			}
+			},
+			"selected": true
 		},
 		{
 			"id": "rrfNode-963453f3-f2e1-4cf3-b9d3-43d11ccffe84",
@@ -2072,8 +2073,8 @@
 		}
 	],
 	"viewport": {
-		"x": 0,
-		"y": 0,
-		"zoom": 1
+		"x": -1305.9876389764152,
+		"y": -44.37250571716595,
+		"zoom": 0.5727589489898783
 	}
 }
