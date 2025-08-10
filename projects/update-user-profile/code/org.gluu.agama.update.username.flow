@@ -1,9 +1,8 @@
 Flow org.gluu.agama.update.username
      Basepath ""
      Timeout 50000 seconds
-//  Create variable for UI feedback
 uiFeedback = {}
-uiFeedback.errorMessage = __________
+uiFeedback.errorMessage = "error"
 //  Iterate x times max
 Repeat 6 times max
      //  Retrieve user profile from UI
