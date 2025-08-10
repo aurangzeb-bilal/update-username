@@ -32,6 +32,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.jans.as.server.service.token.TokenService;
 import io.jans.as.server.model.common.AuthorizationGrant;
+import io.jans.as.server.model.common.AuthorizationGrantList;
+import io.jans.as.server.model.common.AbstractToken;
 
 public class JansUsernameUpdate extends UsernameUpdate {
 
@@ -69,23 +71,29 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 return result;
             }
             
-            TokenService tokenService = CdiUtil.bean(TokenService.class);
-            AuthorizationGrant grant = tokenService.getAuthorizationGrant("Bearer " + access_token.trim());
+            // Get AuthorizationGrantList service
+            AuthorizationGrantList authorizationGrantList = CdiUtil.bean(AuthorizationGrantList.class);
+            if (authorizationGrantList == null) {
+                result.put("valid", false);
+                return result;
+            }
+            
+            // Get the grant for this token
+            AuthorizationGrant grant = authorizationGrantList.getAuthorizationGrantByAccessToken(access_token.trim());
             
             if (grant == null) {
+                // Token not found
                 result.put("valid", false);
                 return result;
             }
             
-            // Get the access tokens collection and check if our token is there and active
-            if (grant.getAccessTokens() == null || grant.getAccessTokens().isEmpty()) {
-                result.put("valid", false);
-                return result;
-            }
+            // Get the actual token object to check if it's valid (not expired)
+            AbstractToken tokenObject = grant.getAccessToken(access_token.trim());
             
-            // If we have access tokens and the grant exists, the token is active
-            // The TokenService already validates that the token exists in the grant
-            result.put("valid", true);
+            // Check if token is active (exists and is valid)
+            boolean isActive = tokenObject != null && tokenObject.isValid();
+            
+            result.put("valid", isActive);
             
         } catch (Exception e) {
             result.put("valid", false);
@@ -93,7 +101,6 @@ public class JansUsernameUpdate extends UsernameUpdate {
         
         return result;
     }
-
 
 //validate token ends here
 
