@@ -78,8 +78,8 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 return result;
             }
             
-            LogUtils.log("Got IntrospectionService, calling introspect...");
-            IntrospectionResponse introspectionResponse = introspectionService.introspect(token);
+            LogUtils.log("Got IntrospectionService, calling inspect...");
+            IntrospectionResponse introspectionResponse = introspectionService.inspect(token);
             
             if (introspectionResponse == null) {
                 LogUtils.log("ERROR: Token introspection returned null");
