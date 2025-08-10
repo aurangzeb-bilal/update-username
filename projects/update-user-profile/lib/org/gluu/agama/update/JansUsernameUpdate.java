@@ -57,136 +57,56 @@ public class JansUsernameUpdate extends UsernameUpdate {
 
         return INSTANCE;
     }
-
+//validate token starts here
     public static Map<String, Object> validateBearerToken(String access_token) {
         Map<String, Object> result = new HashMap<>();
         
         try {
-            LogUtils.log("validateBearerToken called with parameter: %", access_token != null ? "not null" : "null");
-            
-            // Check if token is missing or empty
+            // Check if token exists
             if (access_token == null || access_token.trim().isEmpty()) {
-                LogUtils.log("ERROR: Access token is null or empty");
                 result.put("valid", false);
-                result.put("error", "Access token is missing. Please provide it in the request body.");
+                result.put("error", "Access token is missing");
                 return result;
             }
             
-            String token = access_token.trim();
-            LogUtils.log("Token length: " + token.length());
-            LogUtils.log("Token starts with: " + token.substring(0, Math.min(20, token.length())) + "...");
-            
-            // Use a hardcoded base URL for now - you can update this to match your environment
-            String baseUrl = "https://demoexample.jans.io";
-            LogUtils.log("Using base URL: " + baseUrl);
-            
-            String introspectionUrl = baseUrl + "/jans-auth/restv1/introspection";
-            LogUtils.log("Calling introspection endpoint: " + introspectionUrl);
-            
-            // Get client credentials from configuration
-            ConfigurationService configService = CdiUtil.bean(ConfigurationService.class);
-            String clientId = null;
-            String clientSecret = null;
-            
-            try {
-                // Try to get client credentials from configuration
-                // You may need to adjust these property names based on your Janssen setup
-                clientId = configService.getConfiguration().getProperty("jans.auth.client.id");
-                clientSecret = configService.getConfiguration().getProperty("jans.auth.client.secret");
-            } catch (Exception e) {
-                LogUtils.log("Could not get client credentials from config: " + e.getMessage());
-            }
-            
-            // Fallback to hardcoded values - UPDATED WITH YOUR ACTUAL CREDENTIALS
-            if (clientId == null || clientId.trim().isEmpty()) {
-                clientId = "646fcb9c-f57e-4ec3-a79f-4ee68deaadf2"; // Your client ID from the curl
-            }
-            if (clientSecret == null || clientSecret.trim().isEmpty()) {
-                clientSecret = "mobileapp"; // Your actual client secret
-            }
-            
-            LogUtils.log("Using client ID: " + clientId);
-            LogUtils.log("Using client secret: " + clientSecret);
-            
-            // Prepare the request body
-            String requestBody = "token=" + URLEncoder.encode(token, StandardCharsets.UTF_8.toString());
-            
-            // Create HTTP client and request with Authorization header
-            HttpClient httpClient = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(introspectionUrl))
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .header("Authorization", "Basic " + java.util.Base64.getEncoder()
-                    .encodeToString((clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8)))
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .build();
-            
-            // Send the request
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            
-            if (response.statusCode() != 200) {
-                LogUtils.log("ERROR: Introspection request failed with status: " + response.statusCode());
-                LogUtils.log("Response body: " + response.body());
+            // Get token service
+            TokenService tokenService = CdiUtil.bean(TokenService.class);
+            if (tokenService == null) {
                 result.put("valid", false);
-                result.put("error", "Introspection request failed with status: " + response.statusCode() + ". Response: " + response.body());
+                result.put("error", "Token service not available");
                 return result;
             }
             
-            String jsonResponse = response.body();
-            LogUtils.log("Introspection response: " + jsonResponse);
+            // Get authorization grant from token
+            AuthorizationGrant grant = tokenService.getAuthorizationGrant(access_token.trim());
             
-            // Parse the JSON response
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> introspectionMap = mapper.readValue(jsonResponse, Map.class);
-            
-            // Check if token is active
-            Boolean active = (Boolean) introspectionMap.get("active");
-            LogUtils.log("Token active status: " + active);
-            
-            if (active == null || !active) {
-                LogUtils.log("ERROR: Token is not active");
+            // Check if token is valid and not expired
+            if (grant == null) {
                 result.put("valid", false);
-                result.put("error", "Token is invalid or expired");
+                result.put("error", "Invalid token");
                 return result;
             }
             
-            // Check scopes
-            String scopes = (String) introspectionMap.get("scope");
-            LogUtils.log("Token scopes: " + scopes);
-            
-            boolean hasRequiredScope = scopes != null && (
-                scopes.contains("profile") ||
-                scopes.contains("user_update") ||
-                scopes.contains("openid")
-            );
-            
-            if (!hasRequiredScope) {
-                LogUtils.log("ERROR: Token does not have required scope. Has: " + scopes);
+            if (grant.isExpired()) {
                 result.put("valid", false);
-                result.put("error", "Token does not have required scope (profile, user_update, or openid)");
+                result.put("error", "Token expired");
                 return result;
             }
             
             // Token is valid
-            String tokenClientId = (String) introspectionMap.get("client_id");
-            String username = (String) introspectionMap.get("username");
-            
-            LogUtils.log("Token validated successfully. Client: " + tokenClientId + ", User: " + username);
-            
             result.put("valid", true);
-            result.put("clientId", tokenClientId);
-            result.put("username", username);
-            result.put("scopes", scopes);
+            result.put("username", grant.getUserId());
+            result.put("clientId", grant.getClientId());
             
         } catch (Exception e) {
-            LogUtils.log("ERROR: Token validation failed with exception: " + e.getMessage());
-            e.printStackTrace();
             result.put("valid", false);
-            result.put("error", "Token validation error: " + e.getMessage());
+            result.put("error", "Validation error: " + e.getMessage());
         }
         
         return result;
     }
+}
+//validate token ends here
 
     public boolean passwordPolicyMatch(String userPassword) {
         String regex = '''^(?=.*[!@#$^&*])[A-Za-z0-9!@#$^&*]{6,}$'''
