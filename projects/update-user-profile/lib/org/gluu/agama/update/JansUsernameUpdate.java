@@ -30,6 +30,9 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.jans.as.server.service.AuthorizationGrantService;
+import io.jans.as.server.model.common.AuthorizationGrant;
+
 
 public class JansUsernameUpdate extends UsernameUpdate {
 
@@ -59,7 +62,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
     }
 //validate token starts here
     public static Map<String, Object> validateBearerToken(String access_token) {
-        Map<String, Object> result = new HashMap<>();
+          Map<String, Object> result = new HashMap<>();
         
         try {
             // Check if token exists
@@ -69,24 +72,25 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 return result;
             }
             
-            // Get token service
-            TokenService tokenService = CdiUtil.bean(TokenService.class);
-            if (tokenService == null) {
+            // Get the authorization grant service
+            AuthorizationGrantService grantService = CdiUtil.bean(AuthorizationGrantService.class);
+            if (grantService == null) {
                 result.put("valid", false);
-                result.put("error", "Token service not available");
+                result.put("error", "Grant service not available");
                 return result;
             }
             
-            // Get authorization grant from token
-            AuthorizationGrant grant = tokenService.getAuthorizationGrant(access_token.trim());
+            // Get authorization grant by access token
+            AuthorizationGrant grant = grantService.getAuthorizationGrantByAccessToken(access_token.trim());
             
-            // Check if token is valid and not expired
+            // Check if token is valid
             if (grant == null) {
                 result.put("valid", false);
                 result.put("error", "Invalid token");
                 return result;
             }
             
+            // Check if expired
             if (grant.isExpired()) {
                 result.put("valid", false);
                 result.put("error", "Token expired");
