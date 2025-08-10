@@ -62,7 +62,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
     }
 //validate token starts here
     public static Map<String, Object> validateBearerToken(String access_token) {
-          Map<String, Object> result = new HashMap<>();
+           Map<String, Object> result = new HashMap<>();
         
         try {
             // Check if token exists
@@ -72,16 +72,17 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 return result;
             }
             
-            // Get the authorization grant service
-            AuthorizationGrantService grantService = CdiUtil.bean(AuthorizationGrantService.class);
-            if (grantService == null) {
+            // Get token service
+            TokenService tokenService = CdiUtil.bean(TokenService.class);
+            if (tokenService == null) {
                 result.put("valid", false);
-                result.put("error", "Grant service not available");
+                result.put("error", "Token service not available");
                 return result;
             }
             
-            // Get authorization grant by access token
-            AuthorizationGrant grant = grantService.getAuthorizationGrantByAccessToken(access_token.trim());
+            // Get authorization grant directly from token (not from Authorization header)
+            // The getAuthorizationGrant method expects the raw token
+            AuthorizationGrant grant = tokenService.getAuthorizationGrant("Bearer " + access_token.trim());
             
             // Check if token is valid
             if (grant == null) {
@@ -109,6 +110,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
         
         return result;
     }
+
 
 //validate token ends here
 
