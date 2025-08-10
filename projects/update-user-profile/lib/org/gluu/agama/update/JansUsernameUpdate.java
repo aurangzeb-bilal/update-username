@@ -83,14 +83,41 @@ public class JansUsernameUpdate extends UsernameUpdate {
             String introspectionUrl = baseUrl + "/jans-auth/restv1/introspection";
             LogUtils.log("Calling introspection endpoint: " + introspectionUrl);
             
+            // Get client credentials from configuration
+            ConfigurationService configService = CdiUtil.bean(ConfigurationService.class);
+            String clientId = null;
+            String clientSecret = null;
+            
+            try {
+                // Try to get client credentials from configuration
+                // You may need to adjust these property names based on your Janssen setup
+                clientId = configService.getConfiguration().getProperty("jans.auth.client.id");
+                clientSecret = configService.getConfiguration().getProperty("jans.auth.client.secret");
+            } catch (Exception e) {
+                LogUtils.log("Could not get client credentials from config: " + e.getMessage());
+            }
+            
+            // Fallback to hardcoded values - UPDATED WITH YOUR ACTUAL CREDENTIALS
+            if (clientId == null || clientId.trim().isEmpty()) {
+                clientId = "646fcb9c-f57e-4ec3-a79f-4ee68deaadf2"; // Your client ID from the curl
+            }
+            if (clientSecret == null || clientSecret.trim().isEmpty()) {
+                clientSecret = "mobileapp"; // Your actual client secret
+            }
+            
+            LogUtils.log("Using client ID: " + clientId);
+            LogUtils.log("Using client secret: " + clientSecret);
+            
             // Prepare the request body
             String requestBody = "token=" + URLEncoder.encode(token, StandardCharsets.UTF_8.toString());
             
-            // Create HTTP client and request
+            // Create HTTP client and request with Authorization header
             HttpClient httpClient = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(introspectionUrl))
                 .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("Authorization", "Basic " + java.util.Base64.getEncoder()
+                    .encodeToString((clientId + ":" + clientSecret).getBytes(StandardCharsets.UTF_8)))
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
             
@@ -99,8 +126,9 @@ public class JansUsernameUpdate extends UsernameUpdate {
             
             if (response.statusCode() != 200) {
                 LogUtils.log("ERROR: Introspection request failed with status: " + response.statusCode());
+                LogUtils.log("Response body: " + response.body());
                 result.put("valid", false);
-                result.put("error", "Introspection request failed with status: " + response.statusCode());
+                result.put("error", "Introspection request failed with status: " + response.statusCode() + ". Response: " + response.body());
                 return result;
             }
             
@@ -140,13 +168,13 @@ public class JansUsernameUpdate extends UsernameUpdate {
             }
             
             // Token is valid
-            String clientId = (String) introspectionMap.get("client_id");
+            String tokenClientId = (String) introspectionMap.get("client_id");
             String username = (String) introspectionMap.get("username");
             
-            LogUtils.log("Token validated successfully. Client: " + clientId + ", User: " + username);
+            LogUtils.log("Token validated successfully. Client: " + tokenClientId + ", User: " + username);
             
             result.put("valid", true);
-            result.put("clientId", clientId);
+            result.put("clientId", tokenClientId);
             result.put("username", username);
             result.put("scopes", scopes);
             
