@@ -1,6 +1,7 @@
 package org.gluu.agama.update;
 
 import io.jans.as.common.model.common.User;
+import io.jans.as.common.service.common.EncryptionService;
 import io.jans.as.common.service.common.UserService;
 import io.jans.orm.exception.operation.EntryNotFoundException;
 import io.jans.service.cdi.util.CdiUtil;
@@ -8,18 +9,21 @@ import io.jans.util.StringHelper;
 
 import org.gluu.agama.user.UsernameUpdate;
 import io.jans.agama.engine.script.LogUtils;
+import java.io.IOException;
 import io.jans.as.common.service.common.ConfigurationService;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.regex.Pattern;
 import org.gluu.agama.smtp.SendEmailTemplate;
 import org.gluu.agama.smtp.jans.model.ContextData;
 import io.jans.model.SmtpConfiguration;
 import io.jans.service.MailService;
-
-// Correct import for IntrospectionService and IntrospectionResponse
 import io.jans.as.server.service.IntrospectionService;
-import io.jans.as.model.common.IntrospectionResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashMap;
+import java.util.Map;
 
 public class JansUsernameUpdate extends UsernameUpdate {
 
@@ -30,6 +34,9 @@ public class JansUsernameUpdate extends UsernameUpdate {
     private static final String LAST_NAME = "sn";
     private static final String PASSWORD = "userPassword";
     private static final String INUM_ATTR = "inum";
+    private static final String EXT_ATTR = "jansExtUid";
+    private static final String USER_STATUS = "jansStatus";
+    private static final String EXT_UID_PREFIX = "github:";
     private static final String LANG = "lang";
     private static final SecureRandom RAND = new SecureRandom();
 
@@ -41,6 +48,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
     public static synchronized JansUsernameUpdate getInstance() {
         if (INSTANCE == null)
             INSTANCE = new JansUsernameUpdate();
+
         return INSTANCE;
     }
 
@@ -48,7 +56,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
         Map<String, Object> result = new HashMap<>();
         
         try {
-            LogUtils.log("validateBearerToken called with parameter: " + (access_token != null ? "not null" : "null"));
+            LogUtils.log("validateBearerToken called with parameter: %", access_token != null ? "not null" : "null");
             
             // Check if token is missing or empty
             if (access_token == null || access_token.trim().isEmpty()) {
@@ -62,55 +70,65 @@ public class JansUsernameUpdate extends UsernameUpdate {
             LogUtils.log("Token length: " + token.length());
             LogUtils.log("Token starts with: " + token.substring(0, Math.min(20, token.length())) + "...");
             
-            // Get IntrospectionService
+            // Introspect the token using the working method
             IntrospectionService introspectionService = CdiUtil.bean(IntrospectionService.class);
+            LogUtils.log("Got IntrospectionService, calling introspectToken...");
+            String jsonResponse = introspectionService.introspectToken(token);
             
-            if (introspectionService == null) {
-                LogUtils.log("ERROR: Could not get IntrospectionService bean");
-                result.put("valid", false);
-                result.put("error", "IntrospectionService not available");
-                return result;
-            }
-            
-            LogUtils.log("Got IntrospectionService, calling inspect...");
-            
-            // Call inspect method
-            IntrospectionResponse introspectionResponse = introspectionService.inspect(token);
-            
-            if (introspectionResponse == null) {
-                LogUtils.log("ERROR: Introspection response is null");
+            if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
+                LogUtils.log("ERROR: Introspection response is null or empty");
                 result.put("valid", false);
                 result.put("error", "Token introspection failed");
                 return result;
             }
             
-            LogUtils.log("Introspection response received");
+            LogUtils.log("Introspection JSON response: " + jsonResponse);
+            
+            // Parse the JSON response
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> introspectionMap = mapper.readValue(jsonResponse, Map.class);
             
             // Check if token is active
-            boolean active = introspectionResponse.isActive();
-            LogUtils.log("Token active status: " + active);
-            
-            if (!active) {
+            Boolean active = (Boolean) introspectionMap.get("active");
+            if (active == null || !active) {
                 LogUtils.log("ERROR: Token is not active");
                 result.put("valid", false);
                 result.put("error", "Token is not active or has expired");
                 return result;
             }
             
-            // Get scopes
-            String scopes = introspectionResponse.getScope();
-            LogUtils.log("Token scopes: " + scopes);
+            // Get required scopes
+            String scopes = (String) introspectionMap.get("scope");
+            if (scopes == null || scopes.trim().isEmpty()) {
+                LogUtils.log("ERROR: No scopes found in token");
+                result.put("valid", false);
+                result.put("error", "Token has no scopes");
+                return result;
+            }
             
-            // For now, let's be lenient with scope checking
-            if (scopes == null || scopes.isEmpty()) {
-                LogUtils.log("WARNING: Token has no scopes, but allowing for testing");
+            // Check for required scopes
+            String[] requiredScopes = {"profile", "user_update", "openid"};
+            boolean hasRequiredScopes = true;
+            for (String requiredScope : requiredScopes) {
+                if (!scopes.contains(requiredScope)) {
+                    LogUtils.log("ERROR: Missing required scope: " + requiredScope);
+                    hasRequiredScopes = false;
+                    break;
+                }
+            }
+            
+            if (!hasRequiredScopes) {
+                LogUtils.log("ERROR: Token missing required scopes");
+                result.put("valid", false);
+                result.put("error", "Token missing required scopes: profile, user_update, openid");
+                return result;
             }
             
             // Get user info
-            String username = introspectionResponse.getUsername();
-            String clientId = introspectionResponse.getClientId();
+            String username = (String) introspectionMap.get("username");
+            String clientId = (String) introspectionMap.get("client_id");
             
-            LogUtils.log("Token validation successful. Client: " + clientId + ", User: " + username);
+            LogUtils.log("Token validation successful for user: " + username + ", client: " + clientId);
             
             result.put("valid", true);
             result.put("clientId", clientId);
@@ -128,24 +146,16 @@ public class JansUsernameUpdate extends UsernameUpdate {
     }
 
     public boolean passwordPolicyMatch(String userPassword) {
-        // Simple validation - at least 6 characters
-        if (userPassword == null || userPassword.length() < 6) {
-            return false;
-        }
-        return true;
+        String regex = '''^(?=.*[!@#$^&*])[A-Za-z0-9!@#$^&*]{6,}$'''
+        Pattern pattern = Pattern.compile(regex);
+        return pattern.matcher(userPassword).matches();
     }
 
     public boolean usernamePolicyMatch(String userName) {
-        // Simple validation - only letters
-        if (userName == null || userName.isEmpty()) {
-            return false;
-        }
-        for (char c : userName.toCharArray()) {
-            if (!Character.isLetter(c)) {
-                return false;
-            }
-        }
-        return true;
+        // Regex: Only alphabets (uppercase and lowercase), minimum 1 character
+        String regex = '''^[A-Za-z]+$''';
+        Pattern pattern = Pattern.compile(regex);
+        return pattern.matcher(userName).matches();
     }
 
     public Map<String, String> getUserEntityByMail(String email) {
@@ -165,33 +175,29 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 }
             }
 
-            Map<String, String> userMap = new HashMap<>();
-            userMap.put(UID, uid);
-            userMap.put(INUM_ATTR, inum);
-            userMap.put("name", name);
-            userMap.put("email", email);
-            userMap.put("empty", "false");
-            return userMap;
+            Map<String, String> userInfo = new HashMap<>();
+            userInfo.put("uid", uid);
+            userInfo.put("inum", inum);
+            userInfo.put("name", name);
+            userInfo.put("email", email);
+            userInfo.put("local", "true");
+
+            return userInfo;
         }
 
-        Map<String, String> emptyMap = new HashMap<>();
-        emptyMap.put("empty", "true");
-        return emptyMap;
+        return null;
     }
 
     public Map<String, String> getUserEntityByUsername(String username) {
         User user = getUser(UID, username);
         boolean local = user != null;
-        LogUtils.log("There is % local account for %", local ? "a" : "no", username);
+        LogUtils.log("There is % local account for %", local ? "a" : "user" : "no", username);
 
         if (local) {
-            String email = getSingleValuedAttr(user, MAIL);
+            String uid = getSingleValuedAttr(user, UID);
             String inum = getSingleValuedAttr(user, INUM_ATTR);
             String name = getSingleValuedAttr(user, GIVEN_NAME);
-            String uid = getSingleValuedAttr(user, UID);
-            String displayName = getSingleValuedAttr(user, DISPLAY_NAME);
-            String sn = getSingleValuedAttr(user, LAST_NAME);
-            String lang = getSingleValuedAttr(user, LANG);
+            String email = getSingleValuedAttr(user, MAIL);
 
             if (name == null) {
                 name = getSingleValuedAttr(user, DISPLAY_NAME);
@@ -200,76 +206,17 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 }
             }
 
-            Map<String, String> userMap = new HashMap<>();
-            userMap.put(UID, uid);
-            userMap.put(INUM_ATTR, inum);
-            userMap.put("name", name);
-            userMap.put("email", email);
-            userMap.put(DISPLAY_NAME, displayName);
-            userMap.put(LAST_NAME, sn);
-            userMap.put(LANG, lang);
-            userMap.put("empty", "false");
-            return userMap;
+            Map<String, String> userInfo = new HashMap<>();
+            userInfo.put("uid", uid);
+            userInfo.put("inum", inum);
+            userInfo.put("name", name);
+            userInfo.put("email", email);
+            userInfo.put("local", "true");
+
+            return userInfo;
         }
 
-        Map<String, String> emptyMap = new HashMap<>();
-        emptyMap.put("empty", "true");
-        return emptyMap;
-    }
-
-    public String addNewUser(Map<String, String> profile) throws Exception {
-        Set<String> attributes = Set.of("uid", "mail", "displayName", "givenName", "sn", "userPassword");
-        User user = new User();
-
-        attributes.forEach(attr -> {
-            String val = profile.get(attr);
-            if (StringHelper.isNotEmpty(val)) {
-                user.setAttribute(attr, val);
-            }
-        });
-
-        UserService userService = CdiUtil.bean(UserService.class);
-        user = userService.addUser(user, true);
-
-        if (user == null) {
-            throw new EntryNotFoundException("Added user not found");
-        }
-
-        return getSingleValuedAttr(user, INUM_ATTR);
-    }
-
-    public String updateUser(Map<String, String> profile) throws Exception {
-        String inum = profile.get(INUM_ATTR);
-        User user = getUser(INUM_ATTR, inum);
-
-        if (user == null) {
-            throw new EntryNotFoundException("User not found for inum: " + inum);
-        }
-
-        String currentEmail = getSingleValuedAttr(user, MAIL);
-        String currentLanguage = getSingleValuedAttr(user, LANG);
-
-        String newUid = profile.get(UID);
-        if (StringHelper.isNotEmpty(newUid)) {
-            user.setAttribute(UID, newUid);
-            user.setUserId(newUid);
-        }
-
-        if (StringHelper.isNotEmpty(currentEmail)) {
-            user.setAttribute(MAIL, currentEmail);
-        }
-        if (StringHelper.isNotEmpty(currentLanguage)) {
-            user.setAttribute(LANG, currentLanguage);
-        }
-
-        UserService userService = CdiUtil.bean(UserService.class);
-        user = userService.updateUser(user);
-
-        if (user == null) {
-            throw new EntryNotFoundException("Updated user not found");
-        }
-
-        return getSingleValuedAttr(user, INUM_ATTR);
+        return null;
     }
 
     public Map<String, String> getUserEntityByInum(String inum) {
@@ -278,13 +225,9 @@ public class JansUsernameUpdate extends UsernameUpdate {
         LogUtils.log("There is % local account for %", local ? "a" : "no", inum);
 
         if (local) {
-            String email = getSingleValuedAttr(user, MAIL);
-            String name = getSingleValuedAttr(user, GIVEN_NAME);
             String uid = getSingleValuedAttr(user, UID);
-            String displayName = getSingleValuedAttr(user, DISPLAY_NAME);
-            String sn = getSingleValuedAttr(user, LAST_NAME);
-            String userPassword = getSingleValuedAttr(user, PASSWORD);
-            String lang = getSingleValuedAttr(user, LANG);
+            String name = getSingleValuedAttr(user, GIVEN_NAME);
+            String email = getSingleValuedAttr(user, MAIL);
 
             if (name == null) {
                 name = getSingleValuedAttr(user, DISPLAY_NAME);
@@ -293,86 +236,99 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 }
             }
 
-            Map<String, String> userMap = new HashMap<>();
-            userMap.put(UID, uid);
-            userMap.put("userId", uid);
-            userMap.put(INUM_ATTR, inum);
-            userMap.put("name", name);
-            userMap.put("email", email);
-            userMap.put(DISPLAY_NAME, displayName);
-            userMap.put(LAST_NAME, sn);
-            userMap.put(PASSWORD, userPassword);
-            userMap.put(LANG, lang);
-            return userMap;
+            Map<String, String> userInfo = new HashMap<>();
+            userInfo.put("uid", uid);
+            userInfo.put("inum", inum);
+            userInfo.put("name", name);
+            userInfo.put("email", email);
+            userInfo.put("local", "true");
+
+            return userInfo;
         }
 
-        return new HashMap<>();
+        return null;
     }
 
-    public boolean sendUsernameUpdateEmail(String to, String newUsername, String lang) {
+    public boolean updateUsername(String inum, String newUsername) {
         try {
-            ConfigurationService configService = CdiUtil.bean(ConfigurationService.class);
-            SmtpConfiguration smtpConfig = configService.getConfiguration().getSmtpConfiguration();
-
-            if (smtpConfig == null) {
-                LogUtils.log("SMTP configuration is missing.");
+            User user = getUser(INUM_ATTR, inum);
+            if (user == null) {
+                LogUtils.log("ERROR: User not found with inum: " + inum);
                 return false;
             }
 
-            String preferredLang = (lang != null && !lang.isEmpty()) ? lang.toLowerCase() : "en";
+            // Check if new username already exists
+            User existingUser = getUser(UID, newUsername);
+            if (existingUser != null) {
+                LogUtils.log("ERROR: Username already exists: " + newUsername);
+                return false;
+            }
 
-            Map<String, Map<String, String>> translations = new HashMap<>();
-            translations.put("en", Map.of(
-                    "subject", "Your username has been updated successfully",
-                    "body", "Your username has been updated to",
-                    "footer", "Thanks for keeping your account secure."));
-
-            Map<String, String> bundle = translations.getOrDefault(preferredLang, translations.get("en"));
-
-            ContextData context = new ContextData();
-            context.setDevice("Unknown");
-            context.setLocation("Unknown");
-            context.setTimeZone("UTC");
-
-            String htmlBody = SendEmailTemplate.get(newUsername, context, bundle);
-            String subject = bundle.get("subject");
-            String textBody = bundle.get("body") + ": " + newUsername;
-
-            MailService mailService = CdiUtil.bean(MailService.class);
-            boolean sent = mailService.sendMailSigned(
-                    smtpConfig.getFromEmailAddress(),
-                    smtpConfig.getFromName(),
-                    to,
-                    null,
-                    subject,
-                    textBody,
-                    htmlBody);
-
-            LogUtils.log("Email sent to %", to);
-            return sent;
+            // Update username
+            user.setAttribute(UID, newUsername);
+            
+            UserService userService = CdiUtil.bean(UserService.class);
+            userService.updateUser(user);
+            
+            LogUtils.log("Username updated successfully for inum: " + inum + " to: " + newUsername);
+            return true;
+            
         } catch (Exception e) {
-            LogUtils.log("Failed to send email: %", e.getMessage());
+            LogUtils.log("ERROR: Failed to update username: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
 
-    private String getSingleValuedAttr(User user, String attribute) {
-        Object value = null;
-        if (attribute.equals(UID)) {
-            value = user.getUserId();
-        } else {
-            value = user.getAttribute(attribute, true, false);
+    public boolean sendEmailNotification(String email, String oldUsername, String newUsername) {
+        try {
+            ConfigurationService configurationService = CdiUtil.bean(ConfigurationService.class);
+            SmtpConfiguration smtpConfig = configurationService.getConfiguration().getSmtpConfiguration();
+            
+            if (smtpConfig == null || !smtpConfig.isEnabled()) {
+                LogUtils.log("WARNING: SMTP not configured, skipping email notification");
+                return false;
+            }
+            
+            MailService mailService = CdiUtil.bean(MailService.class);
+            
+            String subject = "Username Update Notification";
+            String body = String.format(
+                "Your username has been updated from '%s' to '%s'.\n\n" +
+                "If you did not request this change, please contact support immediately.",
+                oldUsername, newUsername
+            );
+            
+            mailService.sendMail(email, subject, body);
+            LogUtils.log("Email notification sent to: " + email);
+            return true;
+            
+        } catch (Exception e) {
+            LogUtils.log("ERROR: Failed to send email notification: " + e.getMessage());
+            e.printStackTrace();
+            return false;
         }
-        return value == null ? null : value.toString();
     }
 
-    private User getUser(String attributeName, String value) {
-        UserService userService = CdiUtil.bean(UserService.class);
-        return userService.getUserByAttribute(attributeName, value, true);
-    }
+    private User getUser(String attributeName, String attributeValue) {
+        try {
+            UserService userService = CdiUtil.bean(UserService.class);
+            return userService.getUserByAttribute(attributeName, attributeValue);
+            } catch (EntryNotFoundException e) {
+                return null;
+            } catch (Exception e) {
+                LogUtils.log("ERROR: Error getting user by %: %", attributeName, e.getMessage());
+                return null;
+            }
+        }
 
-    private SmtpConfiguration getSmtpConfiguration() {
-        ConfigurationService configurationService = CdiUtil.bean(ConfigurationService.class);
-        return configurationService.getConfiguration().getSmtpConfiguration();
+    private String getSingleValuedAttr(User user, String attrName) {
+        try {
+            List<String> values = user.getAttributeValues(attrName);
+            return values != null && !values.isEmpty() ? values.get(0) : null;
+        } catch (Exception e) {
+            LogUtils.log("ERROR: Error getting attribute %: %", attrName, e.getMessage());
+            return null;
+        }
     }
 }
