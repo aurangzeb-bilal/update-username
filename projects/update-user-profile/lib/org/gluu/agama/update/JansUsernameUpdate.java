@@ -61,7 +61,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
     }
 //validate token starts here
     public static Map<String, Object> validateBearerToken(String access_token) {
-          Map<String, Object> result = new HashMap<>();
+         Map<String, Object> result = new HashMap<>();
         
         try {
             if (access_token == null || access_token.trim().isEmpty()) {
@@ -72,7 +72,24 @@ public class JansUsernameUpdate extends UsernameUpdate {
             TokenService tokenService = CdiUtil.bean(TokenService.class);
             AuthorizationGrant grant = tokenService.getAuthorizationGrant("Bearer " + access_token.trim());
             
-            result.put("valid", grant != null);
+            if (grant == null) {
+                result.put("valid", false);
+                return result;
+            }
+            
+            // Get the access token to check if it's expired
+            AccessToken accessTokenObj = grant.getAccessToken(access_token.trim());
+            if (accessTokenObj == null) {
+                result.put("valid", false);
+                return result;
+            }
+            
+            // Check if token is active (not expired)
+            Date now = new Date();
+            boolean isActive = accessTokenObj.getExpirationDate() != null && 
+                              accessTokenObj.getExpirationDate().after(now);
+            
+            result.put("valid", isActive);
             
         } catch (Exception e) {
             result.put("valid", false);
