@@ -105,7 +105,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
         
         return result;
     }
-}
+
 //validate token ends here
 
     public boolean passwordPolicyMatch(String userPassword) {
