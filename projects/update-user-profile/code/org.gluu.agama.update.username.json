@@ -61,7 +61,7 @@
 						},
 						{
 							"variableTypeCheck": true,
-							"assignmentExpression": "",
+							"assignmentExpression": "\"error\"",
 							"assignedVariableName": "uiFeedback.errorMessage"
 						}
 					],
@@ -71,13 +71,14 @@
 					"descColor": "",
 					"displayName": "ASSIGNMENT",
 					"hasComment": true,
-					"comment": " Create variable for UI feedback"
+					"comment": ""
 				}
 			},
 			"measured": {
 				"width": 170,
 				"height": 124
-			}
+			},
+			"selected": true
 		},
 		{
 			"id": "repeatNode-630adb5c-19a5-44bb-9244-d5989d0931bb",
