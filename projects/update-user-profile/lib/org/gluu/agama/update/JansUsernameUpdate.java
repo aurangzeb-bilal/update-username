@@ -163,7 +163,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
 
             if (name == null) {
                 name = getSingleValuedAttr(user, DISPLAY_NAME);
-                if (name != null && email != null && email.contains("@")) {
+                if (name == null && email != null && email.contains("@")) {
                     name = email.substring(0, email.indexOf("@"));
                 }
             }
@@ -211,13 +211,11 @@ public class JansUsernameUpdate extends UsernameUpdate {
             userMap.put(DISPLAY_NAME, displayName);
             userMap.put(LAST_NAME, sn);
             userMap.put(LANG, lang);
-            userMap.put("empty", "false");
+
             return userMap;
         }
 
-        Map<String, String> emptyMap = new HashMap<>();
-        emptyMap.put("empty", "true");
-        return emptyMap;
+        return new HashMap<>();
     }
 
     public String addNewUser(Map<String, String> profile) throws Exception {
@@ -286,6 +284,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
 
         if (local) {
             String email = getSingleValuedAttr(user, MAIL);
+            // String inum = getSingleValuedAttr(user, INUM_ATTR);
             String name = getSingleValuedAttr(user, GIVEN_NAME);
             String uid = getSingleValuedAttr(user, UID); // Define uid properly
             String displayName = getSingleValuedAttr(user, DISPLAY_NAME);
@@ -379,7 +378,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
                     "footer", "Terima kasih telah menjaga keamanan akun Anda."));
 
             // ✅ Pick the right lang (fallback to English if missing)
-            Map<String, Map<String, String>> bundle = translations.getOrDefault(preferredLang, translations.get("en"));
+            Map<String, String> bundle = translations.getOrDefault(preferredLang, translations.get("en"));
 
             // Build context data
             ContextData context = new ContextData();
