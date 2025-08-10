@@ -76,12 +76,9 @@ public class JansUsernameUpdate extends UsernameUpdate {
             LogUtils.log("Token length: " + token.length());
             LogUtils.log("Token starts with: " + token.substring(0, Math.min(20, token.length())) + "...");
             
-            // Get configuration service to get the base URL
-            ConfigurationService configService = CdiUtil.bean(ConfigurationService.class);
-            String baseUrl = configService.getConfiguration().getBaseUrl();
-            if (baseUrl == null || baseUrl.trim().isEmpty()) {
-                baseUrl = "https://demoexample.jans.io"; // fallback to your known URL
-            }
+            // Use a hardcoded base URL for now - you can update this to match your environment
+            String baseUrl = "https://demoexample.jans.io";
+            LogUtils.log("Using base URL: " + baseUrl);
             
             String introspectionUrl = baseUrl + "/jans-auth/restv1/introspection";
             LogUtils.log("Calling introspection endpoint: " + introspectionUrl);
