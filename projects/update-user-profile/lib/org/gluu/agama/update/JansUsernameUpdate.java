@@ -72,10 +72,10 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 return result;
             }
             
-            LogUtils.log("Got IntrospectionService, calling introspect...");
+            LogUtils.log("Got IntrospectionService, calling inspect...");
             
-            // Call introspect method (not inspect)
-            IntrospectionResponse introspectionResponse = introspectionService.introspect(token);
+            // Call inspect method
+            IntrospectionResponse introspectionResponse = introspectionService.inspect(token);
             
             if (introspectionResponse == null) {
                 LogUtils.log("ERROR: Introspection response is null");
