@@ -640,7 +640,7 @@
 				"width": 170,
 				"height": 124
 			},
-			"selected": true
+			"selected": false
 		},
 		{
 			"id": "rrfNode-963453f3-f2e1-4cf3-b9d3-43d11ccffe84",
@@ -741,7 +741,7 @@
 					"assignments": [
 						{
 							"variableTypeCheck": true,
-							"assignmentExpression": "User input fields are empty",
+							"assignmentExpression": "\"User input fields are empty\"",
 							"assignedVariableName": "uiFeedback.errorMessage"
 						}
 					],
@@ -758,7 +758,8 @@
 			"measured": {
 				"width": 170,
 				"height": 124
-			}
+			},
+			"selected": true
 		},
 		{
 			"id": "callNode-21c5f8ef-1329-457a-9add-d18e02c137e1",
@@ -2073,8 +2074,8 @@
 		}
 	],
 	"viewport": {
-		"x": -1305.9876389764152,
-		"y": -44.37250571716595,
+		"x": -3023.9876389764145,
+		"y": 32.62749428283399,
 		"zoom": 0.5727589489898783
 	}
 }
