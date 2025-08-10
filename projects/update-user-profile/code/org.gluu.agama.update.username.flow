@@ -28,8 +28,7 @@ Repeat 6 times max
           userWithUid = Call usernameUpdateService getUserEntityByUsername userName
           //  When user with provided username not found
           When userWithUid.empty is true
-               //  Show error
-               uiFeedback.errorMessage = User not registered with this UserName
+               uiFeedback.errorMessage = "User not registered with this UserName"
           Otherwise
                //  Display update user page
                userInput = RRF "updateUserUsername.ftlh" userWithUid
