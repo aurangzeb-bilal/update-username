@@ -61,59 +61,21 @@ public class JansUsernameUpdate extends UsernameUpdate {
     }
 //validate token starts here
     public static Map<String, Object> validateBearerToken(String access_token) {
-         Map<String, Object> result = new HashMap<>();
+          Map<String, Object> result = new HashMap<>();
         
         try {
-            // Check if token exists
             if (access_token == null || access_token.trim().isEmpty()) {
                 result.put("valid", false);
-                result.put("error", "Access token is missing");
                 return result;
             }
             
-            // Get token service
             TokenService tokenService = CdiUtil.bean(TokenService.class);
-            if (tokenService == null) {
-                result.put("valid", false);
-                result.put("error", "Token service not available");
-                return result;
-            }
-            
-            // Get authorization grant from token
             AuthorizationGrant grant = tokenService.getAuthorizationGrant("Bearer " + access_token.trim());
             
-            // Check if token is valid
-            if (grant == null) {
-                result.put("valid", false);
-                result.put("error", "Invalid token");
-                return result;
-            }
-            
-            // Get the actual access token object to check expiration
-            AccessToken accessTokenObj = grant.getAccessToken(access_token.trim());
-            
-            if (accessTokenObj == null) {
-                result.put("valid", false);
-                result.put("error", "Access token not found");
-                return result;
-            }
-            
-            // Check if expired by comparing dates
-            Date now = new Date();
-            if (accessTokenObj.getExpirationDate() != null && accessTokenObj.getExpirationDate().before(now)) {
-                result.put("valid", false);
-                result.put("error", "Token expired");
-                return result;
-            }
-            
-            // Token is valid
-            result.put("valid", true);
-            result.put("username", grant.getUserId());
-            result.put("clientId", grant.getClientId());
+            result.put("valid", grant != null);
             
         } catch (Exception e) {
             result.put("valid", false);
-            result.put("error", "Validation error: " + e.getMessage());
         }
         
         return result;
