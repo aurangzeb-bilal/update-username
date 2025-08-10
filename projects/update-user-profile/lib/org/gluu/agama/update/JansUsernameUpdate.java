@@ -61,7 +61,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
     }
 //validate token starts here
     public static Map<String, Object> validateBearerToken(String access_token) {
-           Map<String, Object> result = new HashMap<>();
+         Map<String, Object> result = new HashMap<>();
         
         try {
             // Check if token exists
@@ -79,8 +79,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 return result;
             }
             
-            // Get authorization grant directly from token (not from Authorization header)
-            // The getAuthorizationGrant method expects the raw token
+            // Get authorization grant from token
             AuthorizationGrant grant = tokenService.getAuthorizationGrant("Bearer " + access_token.trim());
             
             // Check if token is valid
@@ -90,8 +89,18 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 return result;
             }
             
-            // Check if expired
-            if (grant.isExpired()) {
+            // Get the actual access token object to check expiration
+            AccessToken accessTokenObj = grant.getAccessToken(access_token.trim());
+            
+            if (accessTokenObj == null) {
+                result.put("valid", false);
+                result.put("error", "Access token not found");
+                return result;
+            }
+            
+            // Check if expired by comparing dates
+            Date now = new Date();
+            if (accessTokenObj.getExpirationDate() != null && accessTokenObj.getExpirationDate().before(now)) {
                 result.put("valid", false);
                 result.put("error", "Token expired");
                 return result;
