@@ -726,7 +726,7 @@
 				"width": 170,
 				"height": 124
 			},
-			"selected": true
+			"selected": false
 		},
 		{
 			"id": "callNode-4463e682-67a7-4415-ab87-4e8e245f389d",
@@ -1231,7 +1231,7 @@
 					"assignments": [
 						{
 							"variableTypeCheck": true,
-							"assignmentExpression": "User update failed",
+							"assignmentExpression": "\"User update failed\"",
 							"assignedVariableName": "uiFeedback.errorMessage"
 						}
 					],
@@ -1247,7 +1247,8 @@
 			"measured": {
 				"width": 170,
 				"height": 124
-			}
+			},
+			"selected": true
 		},
 		{
 			"id": "logNode-19772a27-b748-44e6-8272-62581ad83509",
@@ -2022,8 +2023,8 @@
 		}
 	],
 	"viewport": {
-		"x": -1455.5855788209478,
-		"y": 60.17897900853529,
-		"zoom": 0.5418629834223917
+		"x": -1978.0358455839992,
+		"y": 152.0217620461205,
+		"zoom": 0.5366301431967293
 	}
 }
