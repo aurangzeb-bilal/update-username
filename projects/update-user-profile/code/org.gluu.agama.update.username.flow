@@ -36,7 +36,7 @@ Repeat 6 times max
                     //   When fields values are not entered
                     When userInput.empty is true
                          //   Show error
-                         uiFeedback.errorMessage = User input fields are empty
+                         uiFeedback.errorMessage = "User input fields are empty"
                     Otherwise
                          //   Check user already exists or not with username
                          userWithUid = Call usernameUpdateService getUserEntityByInum userInput.inum
