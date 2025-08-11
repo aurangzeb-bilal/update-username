@@ -68,7 +68,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
         try {
             if (access_token == null || access_token.trim().isEmpty()) {
                 result.put("valid", false);
-                result.put("error", "Access token is missing");
+                result.put("errorMessage", "Access token is missing");
                 return result;
             }
             
@@ -76,7 +76,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
             AuthorizationGrantList authorizationGrantList = CdiUtil.bean(AuthorizationGrantList.class);
             if (authorizationGrantList == null) {
                 result.put("valid", false);
-                result.put("error", "Service not available");
+                result.put("errorMessage", "Service not available");
                 return result;
             }
             
@@ -86,7 +86,7 @@ public class JansUsernameUpdate extends UsernameUpdate {
             if (grant == null) {
                 // Token not found
                 result.put("valid", false);
-                result.put("error", "Access token is invalid or expired");
+                result.put("errorMessage", "Access token is invalid or expired");
                 return result;
             }
             
@@ -100,12 +100,12 @@ public class JansUsernameUpdate extends UsernameUpdate {
                 result.put("valid", true);
             } else {
                 result.put("valid", false);
-                result.put("error", "Access token is invalid or expired");
+                result.put("errorMessage", "Access token is invalid or expired");
             }
             
         } catch (Exception e) {
             result.put("valid", false);
-            result.put("error", "Access token is invalid or expired");
+            result.put("errorMessage", "Access token is invalid or expired");
         }
         
         return result;
