@@ -64,7 +64,7 @@ Repeat 6 times max
                          Otherwise
                               //   User update failed log
                               Log "@info User update failed"
-                              uiFeedback.errorMessage = User update failed
+                              uiFeedback.errorMessage = "User update failed"
 //   Maximum attempt reached
 Log "@info Maximum attempt reached"
 //   User Registration flow failed
