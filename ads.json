@@ -19,8 +19,7 @@
             "": {},
             "org.gluu.agama.update.username.flow_renamed": {},
             "org.gluu.agama.update.username_copy.flow_renamed": {},
-            "org.gluu.agama.update.username.flow_bak": {},
-            "org.gluu.agama.update.username": {}
+            "org.gluu.agama.update.username.flow_bak": {}
         },
         "name": "update-user-profile"
     }
