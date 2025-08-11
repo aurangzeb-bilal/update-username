@@ -78,7 +78,7 @@
 				"width": 170,
 				"height": 124
 			},
-			"selected": true
+			"selected": false
 		},
 		{
 			"id": "repeatNode-c9196db4-8954-4d52-a8af-0dceb0fe4ca3",
@@ -589,7 +589,7 @@
 					"assignments": [
 						{
 							"variableTypeCheck": true,
-							"assignmentExpression": "User not registered with this UserName",
+							"assignmentExpression": "\"User not registered with this UserName\"",
 							"assignedVariableName": "uiFeedback.errorMessage"
 						}
 					],
@@ -606,7 +606,8 @@
 			"measured": {
 				"width": 170,
 				"height": 124
-			}
+			},
+			"selected": true
 		},
 		{
 			"id": "rrfNode-adaf93bb-a924-41b7-8613-1c352a9f0efd",
@@ -2020,8 +2021,8 @@
 		}
 	],
 	"viewport": {
-		"x": -27.718191518438402,
-		"y": -29.5524836042174,
-		"zoom": 1.1019051158766118
+		"x": -1266.4139604773782,
+		"y": 78.32066576282662,
+		"zoom": 0.5
 	}
 }
