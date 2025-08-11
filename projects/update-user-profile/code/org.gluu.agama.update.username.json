@@ -61,7 +61,7 @@
 						},
 						{
 							"variableTypeCheck": true,
-							"assignmentExpression": "\"error\"",
+							"assignmentExpression": "\"\"",
 							"assignedVariableName": "uiFeedback.errorMessage"
 						}
 					],
@@ -78,7 +78,7 @@
 				"width": 170,
 				"height": 124
 			},
-			"selected": false
+			"selected": true
 		},
 		{
 			"id": "repeatNode-630adb5c-19a5-44bb-9244-d5989d0931bb",
@@ -1281,7 +1281,7 @@
 				"width": 170,
 				"height": 124
 			},
-			"selected": true
+			"selected": false
 		},
 		{
 			"id": "logNode-be990c66-74ec-42b2-8cfa-3ad45a7dad7c",
@@ -2075,8 +2075,8 @@
 		}
 	],
 	"viewport": {
-		"x": -2411.9876389764145,
-		"y": 234.627494282834,
-		"zoom": 0.5727589489898783
+		"x": 366.30096712255624,
+		"y": 61.78320202099502,
+		"zoom": 0.6764241155251381
 	}
 }
